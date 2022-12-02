@@ -19,7 +19,8 @@
         List<List<int>> Transform(string raw) {
             return raw
                 .Split("\n\n")
-                .Select(s => s.Split("\n")
+                .Select(s => s
+                    .Split("\n")
                     .Select(int.Parse)
                     .ToList())
                 .ToList();
