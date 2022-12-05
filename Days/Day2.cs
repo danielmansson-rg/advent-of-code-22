@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-namespace Days {
+﻿namespace Days {
     public class Day2 : DaySolverBase {
         public override string Example1 =>
             @"A Y
