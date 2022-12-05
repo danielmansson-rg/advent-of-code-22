@@ -62,6 +62,7 @@ C Z";
                 _ => throw new Exception()
             };
         }
+
         public override object Solve2(string raw) {
             var input = Transform(raw)
                 .Select(i => {
