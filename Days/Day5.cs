@@ -25,7 +25,7 @@ move 1 from 1 to 2";
             var top = split[0]
                 .Split("\n");
 
-            int numStacks = top[top.Length - 1]
+            int numStacks = top[^1]
                 .Replace("   ", " ")
                 .Replace("  ", " ")
                 .Trim()
