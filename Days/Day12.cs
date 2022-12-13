@@ -53,29 +53,71 @@ abdefghi";
                 .Where(n => InBounds(n, w, h))
                 .ToList();
         }
+
+        public List<(int x, int y)> BFS((List<List<int>> grid, (int x, int y) start, (int x, int y) end) input, List<(int x, int y)> startPositions) {
+            var queue = new LinkedList<(int x, int y)>();
+            var visited = new Dictionary<(int x, int y), (int x, int y)>();
+            int h = input.grid.Count;
+            int w = input.grid[0].Count;
+
+            foreach(var start in startPositions) {
+                queue.AddLast(start);
+                visited.Add(start, start);
+            }
+
+            while(queue.Count != 0) {
+                var p = queue.First();
+                queue.RemoveFirst();
+
+                foreach(var n in GetNeighbors(p, w, h)) {
+                    if(!visited.ContainsKey(n) && input.grid[n.y][n.x] <= input.grid[p.y][p.x] + 1) {
+                        queue.AddLast(n);
+                        visited.Add(n, p);
+
+                        if(n == input.end) {
+                            queue.Clear();
+                            break;
+                        }
+                    }
+                }
+            }
+
+            var result = new List<(int x, int y)>();
+            var current = input.end;
+            result.Add(current);
+            while(current != visited[current]) {
+                current = visited[current];
+                result.Add(current);
+            }
+            result.Reverse();
+            
+            return result;
+        }
         
         public override object Solve1(string raw) {
             var input = Transform(raw);
 
-            var visited = new Dictionary<(int x, int y), (int x, int y)>();
-            var queue = new LinkedList<(int x, int y)>();
+            var result = BFS(input, new() {
+                input.start
+            });
 
-            queue.AddFirst(input.start);
-            visited.Add(input.start, input.start);
-
-            while(queue.Count != 0) {
-                var current = queue.First();
-                queue.RemoveFirst();
-
-            }
-
-            return -1;
+            return result.Count - 1;
         }
 
         public override object Solve2(string raw) {
             var input = Transform(raw);
+            var start = new List<(int x, int y)>();
+            for(int i = 0; i < input.grid.Count; i++) {
+                for(int j = 0; j < input.grid[i].Count; j++) {
+                    if(input.grid[i][j] == 0) {
+                        start.Add((j, i));
+                    }
+                }
+            }
 
-            return -1;
+            var result = BFS(input, start);
+            
+            return result.Count -1;
         }
     }
 }
