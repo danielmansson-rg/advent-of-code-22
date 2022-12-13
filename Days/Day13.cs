@@ -33,6 +33,14 @@ namespace Days {
             public int? value = null;
         }
         
+        string ToString(Node node) {
+            if(node.value.HasValue) {
+                return node.value.ToString();
+            }
+
+            return $"[{string.Join(",", node.list.Select(n => ToString(n)))}]";
+        }
+        
         class Pair {
             public string rawFirst;
             public string rawSecond;
@@ -98,9 +106,76 @@ namespace Days {
             return result;
         }
 
-        private bool IsInRightOrder(Node first, Node second) {
-            throw new NotImplementedException();
+        enum Outcome {
+            InProgress = 0,
+            Correct = -1,
+            Wrong = 1
         }
+        
+        private Outcome IsInRightOrder(Node first, Node second, int depth) {
+            if(first.value.HasValue && second.value.HasValue) {
+                //Console.WriteLine($"{new string(' ', depth)}Compare values {first.value} {second.value}");
+                if(first.value < second.value) {
+                    //Console.WriteLine($"{new string(' ', depth)}LS smaller Correct! {first.value} {second.value}");
+
+                    return Outcome.Correct;
+                } 
+                else if(first.value > second.value) {
+                    //Console.WriteLine($"{new string(' ', depth)}RS smaller Wrong! {first.value} {second.value}");
+                    return Outcome.Wrong;
+                }
+                else {
+                    return Outcome.InProgress;
+                }
+            }
+
+            if(first.value.HasValue) {
+                //Console.WriteLine($"{new string(' ', depth)}Convert first to list: {first.value}");
+
+                first = new Node() {
+                    list = new List<Node>() {
+                        new Node() {
+                            value = first.value
+                        }
+                    }
+                };
+            }
+
+            if(second.value.HasValue) {
+                //Console.WriteLine($"{new string(' ', depth)}Convert first to list: {second.value}");
+     
+                second = new Node() {
+                    list = new List<Node>() {
+                        new Node() {
+                            value = second.value
+                        }
+                    }
+                };
+            }
+
+            //Console.WriteLine($"{new string(' ', depth)}cmp lists");
+            for(int i = 0; i < first.list.Count; i++) {
+                if(i >= second.list.Count) {
+                    //Console.WriteLine($"{new string(' ', depth)}RS out of items");
+                    return Outcome.Wrong;
+                }
+
+                var a = first.list[i];
+                var b = second.list[i];
+
+                var outcome = IsInRightOrder(a, b, depth + 1);
+                if(outcome != Outcome.InProgress)
+                    return outcome;
+            }
+
+            if(first.list.Count < second.list.Count) {
+                //Console.WriteLine($"{new string(' ', depth)}LS out of items");
+                return Outcome.Correct;
+            }
+
+            return Outcome.InProgress;
+        }
+
         
         public override object Solve1(string raw) {
             var input = Transform(raw);
@@ -108,9 +183,13 @@ namespace Days {
             var result = new List<int>();
             for(int i = 0; i < input.Count; i++) {
                 var p = input[i];
-                if(IsInRightOrder(p.first, p.second)) {
+                //Console.WriteLine($"Pair {i + 1}\n");
+                var outcome = IsInRightOrder(p.first, p.second, 0);
+                if(outcome == Outcome.Correct) {
                     result.Add(i + 1);
                 }
+                //Console.WriteLine($"Outcome: {outcome}\n");
+
             }
 
             return result.Sum();
@@ -119,7 +198,38 @@ namespace Days {
         public override object Solve2(string raw) {
             var input = Transform(raw);
 
-            return -1;
+            List<Node> all = input.SelectMany(i => new[] { i.first, i.second }).ToList();
+            var first = new Node() {
+                list = new() {
+                    new Node() {
+                        list = new() {
+                            new Node() {
+                                value = 6
+                            }
+                        }
+                    }
+                }
+            };
+            var second = new Node() {
+                list = new() {
+                    new Node() {
+                        list = new() {
+                            new Node() {
+                                value = 2
+                            }
+                        }
+                    }
+                }
+            };
+            all.Add(first);            
+            all.Add(second);   
+
+            all.Sort((a, b) => (int)IsInRightOrder(a, b, 0));
+
+            // foreach(Node node in all) {
+            //     Console.WriteLine(ToString(node));
+            // }
+            return (all.IndexOf(first) + 1) * (all.IndexOf(second) + 1);
         }
     }
 }
