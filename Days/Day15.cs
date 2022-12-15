@@ -31,7 +31,7 @@ Sensor at x=20, y=1: closest beacon is at x=15, y=3";
                 rangeX = (sensor.x - radius, sensor.x + radius);
                 rangeY = (sensor.y - radius, sensor.y + radius);
             }
-            
+
             public (int x, int y) sensor;
             public (int x, int y) beacon;
             public int radius;
@@ -51,48 +51,70 @@ Sensor at x=20, y=1: closest beacon is at x=15, y=3";
                 .ToList();
         }
 
-        public override object Solve1(string raw) {
-            var input = Transform(raw);
-
-            int targetY = input.Count < 15 ? 10 : 2000000;
-
+        private List<(int min, int max)> GenerateSpans(List<Entry> input, int targetY) {
             var spans = input
                 .Select(e => e.GetSpanX(targetY))
                 .Where(s => s.min <= s.max)
                 .ToList();
 
             for(int i = 0; i < spans.Count; i++) {
-                for(int j = i + 1; j < spans.Count;) {
+                for(int j = i + 1; j < spans.Count; ++j) {
                     if(Overlap(spans[i], spans[j])) {
                         spans[i] = Merge(spans[i], spans[j]);
                         spans.RemoveAt(j);
                         i--;
                         break;
                     }
-                    else {
-                        j++;
-                    }
-                }    
+                }
             }
-            
-            var cover = spans
-                .Select(s => s.max + 1 - s.min)
-                .Sum();
-            
-            return cover;
+
+            return spans;
         }
 
         private bool Overlap((int min, int max) a, (int min, int max) b) {
             var isOutside = b.min > a.max || b.max < a.min;
             return !isOutside;
         }
-        
+
         private (int min, int max) Merge((int min, int max) a, (int min, int max) b) {
             return (Math.Min(a.min, b.min), Math.Max(a.max, b.max));
         }
 
+        public override object Solve1(string raw) {
+            var input = Transform(raw);
+            int targetY = input.Count < 15 ? 10 : 2000000;
+            List<(int min, int max)> spans = GenerateSpans(input, targetY);
+
+            var cover = spans
+                .Select(s => s.max + 1 - s.min)
+                .Sum();
+
+            var beacons = input
+                .Select(e => e.beacon)
+                .Where(b => b.y == targetY)
+                .Distinct()
+                .Count(b => spans.Any(s => Overlap(s, (b.x, b.x))));
+
+            return cover - beacons;
+        }
+
         public override object Solve2(string raw) {
             var input = Transform(raw);
+            int max = input.Count < 15 ? 20 : 4000000;
+
+            for(int i = 0; i <= max; i++) {
+                List<(int min, int max)> spans = GenerateSpans(input, i);
+
+                int x = 0;
+                while(x < max) {
+                    (int min, int max) current = spans.FirstOrDefault(s => Overlap(s, (x, x)));
+                    if(current == (0, 0)) {
+                        return $"Found at {x}, {i}: {x * 4000000L + i}";
+                    }
+
+                    x = current.max + 1;
+                }
+            }
 
             return -1;
         }
