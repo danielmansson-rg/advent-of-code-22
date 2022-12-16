@@ -102,8 +102,18 @@ Sensor at x=20, y=1: closest beacon is at x=15, y=3";
             var input = Transform(raw);
             int max = input.Count < 15 ? 20 : 4000000;
 
+            List<(int min, int max)> spans = new();
             for(int i = 0; i <= max; i++) {
-                List<(int min, int max)> spans = GenerateSpans(input, i);
+                //List<(int min, int max)> spans = GenerateSpans(input, i);
+
+                //Quick test optimization to just skip heavy allocs in GenerateSpans. 2x speedup
+                spans.Clear();
+                foreach(var e in input) {
+                    var s = e.GetSpanX(i);
+                    if(s.min <= s.max) {
+                        spans.Add(s);
+                    }
+                }
 
                 int x = 0;
                 while(x < max) {
