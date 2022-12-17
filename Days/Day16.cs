@@ -181,79 +181,88 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
 
             var best = 0;
             var maxFlow = input.Sum(n => n.flow);
+            var it = 0;
 
             while(queue.Count > 0) {
                 var current = queue.Dequeue();
 
-                Node cn;
-                int cd;
-                int id;
-                if(current.s.depth1 <= current.s.depth2) {
-                    cn = current.s.p1;
-                    cd = current.s.depth1;
-                    id = 1;
+                it++;
+                if(it % 10000 == 0) {
+                    Console.WriteLine($"q: {queue.Count} ");
                 }
-                else {
-                    cn = current.s.p2;
-                    cd = current.s.depth2;
-                    id = 2;
-                }
+                //for(int i = 0; i < 2; i++)
+                {
+                    Node cn;
+                    int cd;
+                    int id;
+                    if(current.s.depth1 <= current.s.depth2) {
+                        cn = current.s.p1;
+                        cd = current.s.depth1;
+                        id = 1;
+                    }
+                    else {
+                        cn = current.s.p2;
+                        cd = current.s.depth2;
+                        id = 2;
+                    }
 
-                foreach(Node node in input) {
-                    if((current.s.open & (1UL << node.idx)) == 0 && node.flow > 0) {
-                        if(!cost.TryGetValue((cn.idx, node.idx), out var moveCost)) {
-                            continue;
-                        }
-
-                        var nextState = new State2() {
-                            //depth = cd + moveCost + 1,
-                            open = current.s.open | (1UL << node.idx)
-                        };
-
-                        var nd = cd + moveCost + 1;
-
-                        if(id == 1) {
-                            nextState.p1 = node;
-                            nextState.depth1 = nd;
-                            nextState.p2 = current.s.p2;
-                            nextState.depth2 = current.s.depth2;
-                        }
-                        else {
-                            nextState.p2 = node;
-                            nextState.depth2 = nd;
-                            nextState.p1 = current.s.p1;
-                            nextState.depth1 = current.s.depth1;
-                        }
-                        
-                        var remaining = maxDepth - nd;
-                        if(remaining <= 0)
-                            continue;
-
-                        var nextValue = current.v + node.flow * remaining;
-                        if(best < nextValue) {
-                            best = nextValue;
-                        }
-
-                        int potential = Potential(nextState.open, cost, node, remaining, input, nextValue);
-                        if(potential < best) {
-                            continue;
-                        }
-
-                        if(lookup.TryGetValue(nextState, out var prevValue)) {
-                            if(prevValue.value >= nextValue) {
+                    foreach(Node node in input) {
+                        if((current.s.open & (1UL << node.idx)) == 0 && node.flow > 0) {
+                            if(!cost.TryGetValue((cn.idx, node.idx), out var moveCost)) {
                                 continue;
                             }
-                        }
 
-                        queue.Enqueue((nextState, nextValue));
-                        lookup[nextState] = (nextValue, current.s);
+                            var nextState = new State2() {
+                                //depth = cd + moveCost + 1,
+                                open = current.s.open | (1UL << node.idx)
+                            };
+
+                            var nd = cd + moveCost + 1;
+
+                            if(id == 1) {
+                                nextState.p1 = node;
+                                nextState.depth1 = nd;
+                                nextState.p2 = current.s.p2;
+                                nextState.depth2 = current.s.depth2;
+                            }
+                            else {
+                                nextState.p2 = node;
+                                nextState.depth2 = nd;
+                                nextState.p1 = current.s.p1;
+                                nextState.depth1 = current.s.depth1;
+                            }
+
+                            var remaining = maxDepth - nd;
+                            if(remaining <= 0)
+                                continue;
+
+                            var nextValue = current.v + node.flow * remaining;
+                            if(best < nextValue) {
+                                best = nextValue;
+                            }
+
+                            int potential = Potential(nextState.open, cost, node, Math.Max(maxDepth - current.s.depth1, maxDepth - current.s.depth2), input, nextValue);
+                            if(potential < best) {
+                                continue;
+                            }
+
+                            if(lookup.TryGetValue(nextState, out var prevValue)) {
+                                if(prevValue.value >= nextValue) {
+                                    continue;
+                                }
+                            }
+
+                            queue.Enqueue((nextState, nextValue));
+                            lookup[nextState] = (nextValue, current.s);
+                        }
                     }
+
                 }
             }
 
             var ans = lookup.Max(l => l.Value.value);
 
-         //   if(ans == 1707) 
+            //   if(ans == 1707) 
             {
                 var c = lookup.First(l => l.Value.value == ans);
                 List<(State2 s, int v)> log = new();
@@ -268,7 +277,7 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
                     Console.WriteLine($"p1:{l.s.depth1} p2:{l.s.depth2} {l.v} {Convert.ToString((long)l.s.open, 2)}");
                 }
             }
-            
+
             if(ans <= 2180 && ans != 1707) {
                 return "Too low: " + ans;
             }
