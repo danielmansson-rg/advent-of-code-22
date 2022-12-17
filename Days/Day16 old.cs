@@ -1,5 +1,5 @@
 ﻿namespace Days {
-    public class Day16 : DaySolverBase {
+    public class Dasy16 : DaySolverBase {
 
         class Node {
             public string id;
@@ -95,7 +95,7 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
                     sr += input[i].flow;
                 }
                 var potential = current.released + remaining * sr;
-                if(potential < best) {
+                if(potential <= best) {
                     continue;
                 }
 
@@ -171,7 +171,6 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
         }
 
         public override object Solve1(string raw) {
-            return "skip";
             var input = Transform(raw);
 
             var start = input.First(n => n.id == "AA");
@@ -190,7 +189,12 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
             public ulong open;
             public ulong visited1;
             public ulong visited2;
+            public int parent;
+            public char a1;
+            public char a2;
+            public int numLeftToOpen;
         }
+
 
         int BFS2(Node start, int depthLimit, List<Node> input) {
 
@@ -198,6 +202,9 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
 
             queue.Enqueue(new BfsState2() {
                 p1 = start,
+                p2 = start,
+                parent = -1,
+                numLeftToOpen = input.Count(n => n.flow > 0)
             });
 
             int best = 0;
@@ -207,7 +214,7 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
 
             while(queue.Count != 0) {
                 var current = queue.Dequeue();
-                // history.Add(current);
+                history.Add(current);
                 it++;
                 if(it % 1000000 == 0) {
                     Console.WriteLine($"d: {current.depth} q:{queue.Count} b:{best}");
@@ -219,7 +226,7 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
                 if(value > best) {
                     best = value;
                     bestState = current;
-                    //Console.WriteLine("Best: " + best);
+                    Console.WriteLine("Best: " + best);
                 }
 
                 var sr = 0;
@@ -227,17 +234,17 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
                     sr += input[i].flow;
                 }
                 var potential = current.released + remaining * sr;
-                if(potential < best) {
-                    continue;
+                if(potential <= best) {
+                   continue;
                 }
 
                 if(current.depth + 1 >= depthLimit) {
                     continue;
                 }
-                
+
                 GetActions(current, current.p1, 1, actionResult1);
                 GetActions(current, current.p2, 2, actionResult2);
-
+                
                 foreach(var a1 in actionResult1) {
                     foreach(var a2 in actionResult2) {
                         var next = new BfsState2() {
@@ -246,93 +253,82 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
                             visited2 = current.visited2,
                             open = current.open,
                             totalFlow = current.totalFlow,
+                            parent = history.Count - 1,
+                            numLeftToOpen = current.numLeftToOpen,
+                            a1 = a1.t,
+                            a2 = a2.t
                         };
-                        
+
                         if(a1.t == 'o') {
                             next.p1 = a1.p;
                             next.totalFlow += a1.p.flow;
                             next.open |= (1UL << a1.p.idx);
+                            next.numLeftToOpen--;
                             next.visited1 = 0UL;
+                            next.visited2 = 0UL;
+                        }
+                        else if(a1.t == '-') {
+                            next.p1 = a1.p;
                         }
                         else {
                             ulong visitFlag = (1UL << a1.con.idx);
-                            next.p1 = a1.p;
+                            next.p1 = a1.con;
                             next.visited1 |= visitFlag;
                         }
-                        
+
                         if(a2.t == 'o') {
+                            if((next.open & (1UL << a2.p.idx)) != 0) {
+                                continue;
+                            }
+                            
                             next.p2 = a2.p;
                             next.totalFlow += a2.p.flow;
                             next.open |= (1UL << a2.p.idx);
+                            next.numLeftToOpen--;
+                            next.visited1 = 0UL;
                             next.visited2 = 0UL;
+                        }
+                        else if(a2.t == '-') {
+                            next.p2 = a2.p;
                         }
                         else {
                             ulong visitFlag = (1UL << a2.con.idx);
-                            next.p2 = a2.p;
+                            next.p2 = a2.con;
                             next.visited2 |= visitFlag;
                         }
-                        
+
                         next.released = current.released + current.totalFlow;
                         queue.Enqueue(next);
                     }
                 }
-                
 
-                foreach(var action in actionResult1) {
-                    if(action.t == 'o') {
-                        var next = new BfsState2() {
-                            p1 = action.p,
-                            depth = current.depth + 1,
-                            totalFlow = current.totalFlow + action.p.flow,
-                            open = current.open | (1UL << action.p.idx),
-                            visited1 = action.id == 1 ? 0UL : current.visited1,
-                            visited2 = action.id == 2 ? 0UL : current.visited2,
-                        };
-                        next.released = current.released + current.totalFlow;
-
-                        queue.Enqueue(next);
-                    }
-                    else {
-                        ulong visitFlag = (1UL << action.con.idx);
-
-                        var next = new BfsState2() {
-                            p1 = action.con,
-                            depth = current.depth + 1,
-                            totalFlow = current.totalFlow,
-                            open = current.open,
-                            visited1 = current.visited1 | visitFlag
-                        };
-                        next.released = current.released + current.totalFlow;
-
-                        queue.Enqueue(next);
-                    }
-                }
             }
-            //
-            // var log = new List<BfsState>();
-            // var h = bestState;
-            // while(h.parent != -1) {
-            //     log.Add(h);
-            //     h = history[h.parent];
-            // }
-            // log.Reverse();
-            //
-            // foreach(BfsState s in log) {
-            //     Console.Write($"== Minute {s.depth} == at {s.p1.id}");
-            //     Console.Write($"  Open: {Convert.ToString((long)s.open, 2)}");
-            //     Console.Write($"  F: {s.totalFlow}");
-            //     Console.Write($"  R: {s.released}");
-            //     Console.Write($"  A: {s.action}");
-            //     Console.WriteLine($"");
-            // }
-            //
+            
+            var log = new List<BfsState2>();
+            var h = bestState;
+            while(h.parent != -1) {
+                log.Add(h);
+                h = history[h.parent];
+            }
+            log.Reverse();
+            
+            foreach(BfsState2 s in log) {
+                Console.Write($"== Minute {s.depth} ==");
+                Console.Write($"  Open: {Convert.ToString((long)s.open, 2)}");
+                Console.Write($"  F: {s.totalFlow}");
+                Console.WriteLine($"  R: {s.released}");
+                Console.WriteLine($"p1: {s.p1.id} {s.a1}");
+                Console.WriteLine($"p2: {s.p2.id} {s.a2}");
+                Console.WriteLine($"");
+            }
+            
             return best;
         }
-        
+
         List<(char t, Node p, Node con, int id)> actionResult1 = new List<(char, Node, Node, int)>();
         List<(char t, Node p, Node con, int id)> actionResult2 = new List<(char, Node, Node, int)>();
 
-        private void GetActions(in BfsState2 current, Node p, int id,List<(char, Node, Node, int)> actionResult) {
+        private void GetActions(in BfsState2 current, Node p, int id, List<(char, Node, Node, int)> actionResult) {
             actionResult.Clear();
             //Open valve
             if((current.open & (1UL << current.p1.idx)) == 0 && p.flow > 0) {
@@ -349,14 +345,20 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
 
                 actionResult.Add(('m', p, connection, id));
             }
+            
+            //Nop
+            if(current.numLeftToOpen <= 1) {
+                actionResult.Add(('-', p, null, id));
+            }
         }
 
         public override object Solve2(string raw) {
+            return "skip";
             var input = Transform(raw);
 
             var start = input.First(n => n.id == "AA");
 
-            int value = BFS2(start, 30, input);
+            int value = BFS2(start, 26, input);
 
             return value;
         }
