@@ -154,6 +154,8 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
 
         struct State2 {
             public ulong open;
+            public Node p1;
+            public Node p2;
             public int depth1;
             public int depth2;
         }
@@ -168,11 +170,14 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
 
             var start = input.First(n => n.id == "AA");
 
-            int maxDepth = 30;
-            Dictionary<State2, int> lookup = new();
-            Queue<(State2 s, Node n1, Node n2, int v)> queue = new();
+            int maxDepth = 26;
+            Dictionary<State2, (int value, State2 prev)> lookup = new();
+            Queue<(State2 s, int v)> queue = new();
 
-            queue.Enqueue((new State2(), start, start, 0));
+            queue.Enqueue((new State2() {
+                p1 = start,
+                p2 = start
+            }, 0));
 
             var best = 0;
             var maxFlow = input.Sum(n => n.flow);
@@ -180,62 +185,96 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
             while(queue.Count > 0) {
                 var current = queue.Dequeue();
 
-                //alternate instead
+                Node cn;
+                int cd;
+                int id;
+                if(current.s.depth1 <= current.s.depth2) {
+                    cn = current.s.p1;
+                    cd = current.s.depth1;
+                    id = 1;
+                }
+                else {
+                    cn = current.s.p2;
+                    cd = current.s.depth2;
+                    id = 2;
+                }
+
                 foreach(Node node in input) {
-                    foreach(Node node2 in input) {
-                        if((current.s.open & (1UL << node.idx)) != 0 || node.flow == 0)
-                            continue;
-                        if((current.s.open & (1UL << node2.idx)) != 0 || node2.flow == 0)
-                            continue;
-                        
-                        if(!cost.TryGetValue((current.n1.idx, node.idx), out var moveCost)) {
-                            continue;
-                        }
-                        if(!cost.TryGetValue((current.n2.idx, node2.idx), out var moveCost2)) {
+                    if((current.s.open & (1UL << node.idx)) == 0 && node.flow > 0) {
+                        if(!cost.TryGetValue((cn.idx, node.idx), out var moveCost)) {
                             continue;
                         }
 
                         var nextState = new State2() {
-                            depth1 = current.s.depth1 + moveCost + 1,
-                            depth2 = current.s.depth2 + moveCost2 + 1,
-                            open = current.s.open //| (1UL << node.idx) | (1UL << node2.idx)
+                            //depth = cd + moveCost + 1,
+                            open = current.s.open | (1UL << node.idx)
                         };
+
+                        var nd = cd + moveCost + 1;
+
+                        if(id == 1) {
+                            nextState.p1 = node;
+                            nextState.depth1 = nd;
+                            nextState.p2 = current.s.p2;
+                            nextState.depth2 = current.s.depth2;
+                        }
+                        else {
+                            nextState.p2 = node;
+                            nextState.depth2 = nd;
+                            nextState.p1 = current.s.p1;
+                            nextState.depth1 = current.s.depth1;
+                        }
                         
-                        var remaining1 = maxDepth - nextState.depth1;
-                        var remaining2 = maxDepth - nextState.depth2;
+                        var remaining = maxDepth - nd;
+                        if(remaining <= 0)
+                            continue;
 
-                        var nextValue = 0;
-                        if(remaining1 > 0 && (nextState.open & (1UL << node.idx)) == 0) {
-                            nextValue += current.v + node.flow * remaining1;
-                            nextState.open |= 1UL << node.idx;
-                        }
-                        if(remaining2 > 0 && (nextState.open & (1UL << node2.idx)) == 0) {
-                            nextValue += current.v + node2.flow * remaining2;
-                            nextState.open |= 1UL << node2.idx;
-                        }
-
+                        var nextValue = current.v + node.flow * remaining;
                         if(best < nextValue) {
                             best = nextValue;
                         }
 
-                        int potential = Potential(nextState.open, cost, node, Math.Max(remaining1, remaining2), input, nextValue);
+                        int potential = Potential(nextState.open, cost, node, remaining, input, nextValue);
                         if(potential < best) {
                             continue;
                         }
 
                         if(lookup.TryGetValue(nextState, out var prevValue)) {
-                            if(prevValue >= nextValue) {
+                            if(prevValue.value >= nextValue) {
                                 continue;
                             }
                         }
 
-                        queue.Enqueue((nextState, node, node2, nextValue));
-                        lookup[nextState] = nextValue;
+                        queue.Enqueue((nextState, nextValue));
+                        lookup[nextState] = (nextValue, current.s);
                     }
                 }
             }
 
-            return lookup.Max(l => l.Value);
+            var ans = lookup.Max(l => l.Value.value);
+
+         //   if(ans == 1707) 
+            {
+                var c = lookup.First(l => l.Value.value == ans);
+                List<(State2 s, int v)> log = new();
+                log.Add((c.Key, c.Value.value));
+                while(lookup.TryGetValue(c.Value.prev, out var p)) {
+                    c = new(c.Value.prev, p);
+                    log.Add((c.Key, c.Value.value));
+                }
+
+                log.Reverse();
+                foreach((State2 s, int v) l in log) {
+                    Console.WriteLine($"p1:{l.s.depth1} p2:{l.s.depth2} {l.v} {Convert.ToString((long)l.s.open, 2)}");
+                }
+            }
+            
+            if(ans <= 2180 && ans != 1707) {
+                return "Too low: " + ans;
+            }
+            else {
+                return ans;
+            }
         }
     }
 }
