@@ -171,7 +171,7 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
             var start = input.First(n => n.id == "AA");
 
             int maxDepth = 26;
-            Dictionary<State2, (int value, State2 prev)> lookup = new();
+            Dictionary<State2, int> lookup = new();
             Queue<(State2 s, int v)> queue = new();
 
             queue.Enqueue((new State2() {
@@ -188,7 +188,7 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
 
                 it++;
                 if(it % 10000 == 0) {
-                    Console.WriteLine($"q: {queue.Count} ");
+                    //Console.WriteLine($"q: {queue.Count} ");
                 }
                 //for(int i = 0; i < 2; i++)
                 {
@@ -247,43 +247,37 @@ Valve JJ has flow rate=21; tunnel leads to valve II";
                             }
 
                             if(lookup.TryGetValue(nextState, out var prevValue)) {
-                                if(prevValue.value >= nextValue) {
+                                if(prevValue >= nextValue) {
                                     continue;
                                 }
                             }
 
                             queue.Enqueue((nextState, nextValue));
-                            lookup[nextState] = (nextValue, current.s);
+                            lookup[nextState] = nextValue;
                         }
                     }
 
                 }
             }
 
-            var ans = lookup.Max(l => l.Value.value);
+            var ans = lookup.Max(l => l.Value);
 
-            //   if(ans == 1707) 
-            {
-                var c = lookup.First(l => l.Value.value == ans);
-                List<(State2 s, int v)> log = new();
-                log.Add((c.Key, c.Value.value));
-                while(lookup.TryGetValue(c.Value.prev, out var p)) {
-                    c = new(c.Value.prev, p);
-                    log.Add((c.Key, c.Value.value));
-                }
+            // if(false) {
+            //     var c = lookup.First(l => l.Value.value == ans);
+            //     List<(State2 s, int v)> log = new();
+            //     log.Add((c.Key, c.Value.value));
+            //     while(lookup.TryGetValue(c.Value.prev, out var p)) {
+            //         c = new(c.Value.prev, p);
+            //         log.Add((c.Key, c.Value.value));
+            //     }
+            //
+            //     log.Reverse();
+            //     foreach((State2 s, int v) l in log) {
+            //         Console.WriteLine($"p1:{l.s.depth1} p2:{l.s.depth2} {l.v} {Convert.ToString((long)l.s.open, 2)}");
+            //     }
+            // }
 
-                log.Reverse();
-                foreach((State2 s, int v) l in log) {
-                    Console.WriteLine($"p1:{l.s.depth1} p2:{l.s.depth2} {l.v} {Convert.ToString((long)l.s.open, 2)}");
-                }
-            }
-
-            if(ans <= 2180 && ans != 1707) {
-                return "Too low: " + ans;
-            }
-            else {
-                return ans;
-            }
+            return ans;
         }
     }
 }
