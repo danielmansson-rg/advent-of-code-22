@@ -119,14 +119,18 @@
             return highestClearY;
         }
 
+        private static int maxH = 0;
         ulong GetHash(int y, int[] heights) {
             ulong hash = 0UL;
             
             for(int i = 0; i < 7; i++) {
                 var diff = y - heights[i];
-                if(diff > 255)
+                if(diff > 255) {
                     diff = 255;
-
+                }
+                if(diff > maxH) {
+                    maxH = diff;
+                }
                 hash |= ((ulong)diff << (8 * i));
             }
 
@@ -220,6 +224,13 @@
                     Console.WriteLine($"Seen before at {idx}");
                     return Calc(prevList, idx, highestClearY, i);
                 }
+                /*
+                 *   #####
+                 *      ##
+                 *      ##
+                 *      ##
+                 * #######
+                 */
                 prev.Add(o, prevList.Count);
                 var prevHighClearY = highestClearY;
                 
